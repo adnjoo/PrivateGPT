@@ -15,7 +15,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-LM_STUDIO_TIMEOUT = 90  # Timeout in seconds for LM Studio API requests
+LM_STUDIO_TIMEOUT = 180  # Timeout in seconds for LM Studio API requests
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"/start command received from user {update.effective_user.id}")
