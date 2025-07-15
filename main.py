@@ -15,6 +15,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+LM_STUDIO_TIMEOUT = 90  # Timeout in seconds for LM Studio API requests
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"/start command received from user {update.effective_user.id}")
     await update.message.reply_text("Hello! I'm your bot 👋")
@@ -31,7 +33,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     {"role": "user", "content": user_message}
                 ]
             },
-            timeout=30
+            timeout=LM_STUDIO_TIMEOUT
         )
         response.raise_for_status()
         data = response.json()

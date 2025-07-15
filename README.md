@@ -6,7 +6,7 @@ python -m venv venv
 source venv/bin/activate # mac. for Windows, use venv/Scripts/activate
 
 pip install -r requirements.txt
-python main.py
+python main.py # watchmedo auto-restart --patterns="*.py" --recursive -- python main.py
 ```
 
 Put in .env
