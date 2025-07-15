@@ -5,6 +5,7 @@ import os
 import logging
 import requests
 import argparse
+import chroma_store
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -21,6 +22,9 @@ LM_STUDIO_TIMEOUT = 180  # Timeout in seconds for LM Studio API requests
 # In-memory user conversation histories (user_id -> list of messages)
 user_histories = {}
 CONTEXT_WINDOW = 30  # Number of messages to keep in context
+
+# Initialize Chroma collection
+chroma_store.init_chroma("chat_history")
 
 parser = argparse.ArgumentParser(description="Telegram Bot with optional context window display.")
 parser.add_argument('--show-context', action='store_true', help='Print the context window sent to the LLM for each user message')
@@ -48,6 +52,13 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             print(f"{msg['role']}: {msg['content']}")
         print("--- End context window ---\n")
 
+    # Store user message in Chroma with embedding
+    chroma_store.save_message(user_message, user_id=user_id, role="user", message_id=update.message.message_id)
+
+    # Demonstrate semantic search: print top 3 similar messages to the current user message
+    similar = chroma_store.get_similar_messages(user_message, top_k=3)
+    print(f"[Semantic Search] Top 3 similar messages for user {user_id}: {similar}")
+
     try:
         response = requests.post(
             "http://localhost:1234/v1/chat/completions",
@@ -67,6 +78,8 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Limit context window again
         history = history[-CONTEXT_WINDOW:]
         user_histories[user_id] = history
+        # Store bot reply in Chroma with embedding
+        chroma_store.save_message(lm_reply, user_id=user_id, role="assistant", message_id=update.message.message_id)
     except Exception as e:
         logger.error(f"Error communicating with LM Studio: {e}")
         await update.message.reply_text("Sorry, I couldn't get a response from the LM Studio bot.")
