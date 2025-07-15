@@ -19,17 +19,12 @@ python main.py [--show-context]
 ## Architecture
 
 ```mermaid
-flowchart TD
-    User["User sends message"] -->|1| Bot["Telegram Bot (main.py)"]
-    Bot -->|2| ChromaStore["Save message & embedding (chroma_store.py)"]
-    Bot -->|3| LMStudio["LM Studio API"]
-    ChromaStore -->|4| ChromaDB["ChromaDB (Persistent Vector Store)"]
-    Bot -->|5| ChromaStore
-    ChromaStore -->|6| ChromaDB
-    Bot -->|7| Similar["Retrieve similar messages (semantic search)"]
-    Similar -->|8| Bot
-    LMStudio -->|9| Bot
-    Bot -->|10| User["Bot replies to user"]
+flowchart LR
+    User["User"] --> Bot["Telegram Bot"]
+    Bot -- "retrieves context from" --> ChromaDB["ChromaDB"]
+    Bot -- "sends message + context" --> LMStudio["LM Studio API"]
+    LMStudio --> Bot
+    Bot --> User
 ```
 
 ## Features
