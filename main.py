@@ -17,21 +17,31 @@ logger = logging.getLogger(__name__)
 
 LM_STUDIO_TIMEOUT = 180  # Timeout in seconds for LM Studio API requests
 
+# In-memory user conversation histories (user_id -> list of messages)
+user_histories = {}
+CONTEXT_WINDOW = 10  # Number of messages to keep in context
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"/start command received from user {update.effective_user.id}")
     await update.message.reply_text("Hello! I'm your bot 👋")
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Message received from user {update.effective_user.id}: {update.message.text}")
+    user_id = update.effective_user.id
     user_message = update.message.text
+
+    # Get or create history for this user
+    history = user_histories.get(user_id, [])
+    history.append({"role": "user", "content": user_message})
+    # Limit context window
+    history = history[-CONTEXT_WINDOW:]
+
     try:
         response = requests.post(
             "http://localhost:1234/v1/chat/completions",
             json={
                 "model": "LM Studio",
-                "messages": [
-                    {"role": "user", "content": user_message}
-                ]
+                "messages": history
             },
             timeout=LM_STUDIO_TIMEOUT
         )
@@ -40,6 +50,11 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lm_reply = data["choices"][0]["message"]["content"]
         logger.info(f"LM Studio reply: {lm_reply}")
         await update.message.reply_text(lm_reply)
+        # Add assistant reply to history
+        history.append({"role": "assistant", "content": lm_reply})
+        # Limit context window again
+        history = history[-CONTEXT_WINDOW:]
+        user_histories[user_id] = history
     except Exception as e:
         logger.error(f"Error communicating with LM Studio: {e}")
         await update.message.reply_text("Sorry, I couldn't get a response from the LM Studio bot.")
