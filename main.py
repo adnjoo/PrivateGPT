@@ -19,7 +19,7 @@ LM_STUDIO_TIMEOUT = 180  # Timeout in seconds for LM Studio API requests
 
 # In-memory user conversation histories (user_id -> list of messages)
 user_histories = {}
-CONTEXT_WINDOW = 10  # Number of messages to keep in context
+CONTEXT_WINDOW = 30  # Number of messages to keep in context
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"/start command received from user {update.effective_user.id}")
