@@ -1,3 +1,6 @@
 python-telegram-bot
 python-dotenv
 requests
+
+chromadb
+sentence-transformers
