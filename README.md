@@ -17,3 +17,5 @@ python main.py [--show-context]
 
 ## Troubleshooting
 - If you see errors, ensure LM Studio is running and your .env has the correct BOT_TOKEN.
+
+## [License](./LICENSE)
