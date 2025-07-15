@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 import logging
 import requests
+import argparse
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -21,6 +22,11 @@ LM_STUDIO_TIMEOUT = 180  # Timeout in seconds for LM Studio API requests
 user_histories = {}
 CONTEXT_WINDOW = 30  # Number of messages to keep in context
 
+parser = argparse.ArgumentParser(description="Telegram Bot with optional context window display.")
+parser.add_argument('--show-context', action='store_true', help='Print the context window sent to the LLM for each user message')
+args = parser.parse_args()
+SHOW_CONTEXT = args.show_context
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"/start command received from user {update.effective_user.id}")
     await update.message.reply_text("Hello! I'm your bot 👋")
@@ -35,6 +41,12 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     history.append({"role": "user", "content": user_message})
     # Limit context window
     history = history[-CONTEXT_WINDOW:]
+
+    if SHOW_CONTEXT:
+        print(f"\n--- Context window for user {user_id} ---")
+        for msg in history:
+            print(f"{msg['role']}: {msg['content']}")
+        print("--- End context window ---\n")
 
     try:
         response = requests.post(

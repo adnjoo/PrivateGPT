@@ -1,32 +1,19 @@
 # TGBot
 
-### Instructions
+A Telegram bot that forwards messages to a local LM Studio server and replies with context-aware responses.
+
+## Quick Start
 ```bash
 python -m venv venv
-source venv/bin/activate # mac. for Windows, use venv/Scripts/activate
-
+source venv/bin/activate  # or venv/Scripts/activate on Windows
 pip install -r requirements.txt
-python main.py # watchmedo auto-restart --patterns="*.py" --recursive -- python main.py
+# Add BOT_TOKEN=... to a .env file
+python main.py [--show-context]
 ```
 
-Put in .env
-```bash
-BOT_TOKEN=...
-```
+- Requires LM Studio running at http://localhost:1234/v1/chat/completions
+- The bot keeps a short-term memory (last 30 messages per user) for context.
+- Use `--show-context` to print the context window sent to the LLM for each user message.
 
-## LM Studio Integration
-
-This bot forwards user messages to an LM Studio server running locally and replies with the response.
-
-### Requirements
-- LM Studio server running and accessible at http://localhost:1234/v1/chat/completions
-- The Telegram bot token in your .env file as shown above
-
-### How it works
-- Any message sent to the bot is forwarded to LM Studio as a single-turn chat (no conversation history)
-- The bot replies with the LM Studio response
-- Logging is enabled; you will see info about incoming messages and LM Studio replies in your console
-
-### Troubleshooting
-- If you see "Sorry, I couldn't get a response from the LM Studio bot.", make sure LM Studio is running and accessible at http://localhost:1234
-- Check your console for error logs for more details
+## Troubleshooting
+- If you see errors, ensure LM Studio is running and your .env has the correct BOT_TOKEN.
