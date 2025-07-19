@@ -3,6 +3,11 @@
 A Telegram bot that forwards messages to a local LM Studio server and replies with context-aware responses. Now with persistent vector memory and semantic search using ChromaDB and Sentence Transformers.
 
 ## Quick Start
+
+### Prerequisites
+- **Windows users**: Visual Studio required for Chroma.
+
+### Installation
 ```bash
 python -m venv venv
 source venv/bin/activate  # or venv/Scripts/activate on Windows
