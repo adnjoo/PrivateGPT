@@ -7,6 +7,7 @@ import requests
 import argparse
 import subprocess
 import time
+import ollama_client
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -17,10 +18,6 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
-
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
-OLLAMA_API_URL = "http://localhost:11434/api/chat"
-OLLAMA_START_TIMEOUT = 30  # seconds
 
 # In-memory user conversation histories (user_id -> list of messages)
 user_histories = {}
@@ -40,32 +37,6 @@ if USE_CHROMA:
     logger.info("Chroma DB enabled and initialized with collection 'chat_history'.")
 else:
     logger.info("Chroma DB disabled - running in memory-only mode.")
-
-def is_ollama_running():
-    try:
-        r = requests.get("http://localhost:11434")
-        return r.status_code == 200
-    except Exception:
-        return False
-
-def start_ollama():
-    logger.info("Starting Ollama server...")
-    subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for _ in range(OLLAMA_START_TIMEOUT):
-        if is_ollama_running():
-            logger.info("Ollama server is running.")
-            return True
-        time.sleep(1)
-    logger.error("Failed to start Ollama server within timeout.")
-    return False
-
-# Start Ollama if not running
-if not is_ollama_running():
-    started = start_ollama()
-    if not started:
-        raise RuntimeError("Could not start Ollama server.")
-else:
-    logger.info("Ollama server already running.")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"/start command received from user {update.effective_user.id}")
@@ -97,26 +68,8 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         similar = chroma_store.get_similar_messages(user_message, top_k=3)
         logger.debug(f"[Semantic Search] Top 3 similar messages for user {user_id}: {similar}")
 
-    SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "You are a helpful assistant.")
-    # Insert system prompt at the start
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
-
-    print(f"Messages: {messages}")
-
     try:
-        response = requests.post(
-            OLLAMA_API_URL,
-            json={
-                "model": OLLAMA_MODEL,
-                "messages": messages,
-                "stream": False,
-                "options": {"temperature": 0.7, "num_predict": 1000}
-            },
-            timeout=180
-        )
-        response.raise_for_status()
-        data = response.json()
-        lm_reply = data["message"]["content"]
+        lm_reply = ollama_client.send_to_ollama(history)
         logger.info(f"Ollama reply: {lm_reply}")
         await update.message.reply_text(lm_reply)
         # Add assistant reply to history
