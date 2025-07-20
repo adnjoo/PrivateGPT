@@ -3,7 +3,9 @@ import requests
 import subprocess
 import time
 import logging
+from dotenv import load_dotenv
 
+load_dotenv()
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
 OLLAMA_API_URL = "http://localhost:11434/api/chat"
 OLLAMA_START_TIMEOUT = 30  # seconds
@@ -19,6 +21,7 @@ def is_ollama_running():
         return False
 
 def start_ollama():
+    print(f"Starting Ollama server with model {OLLAMA_MODEL}...")
     logger.info("Starting Ollama server...")
     subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(OLLAMA_START_TIMEOUT):
@@ -41,6 +44,7 @@ def send_to_ollama(history, temperature=0.7, num_predict=1000, timeout=180):
     ensure_ollama_running()
     # Insert system prompt at the start
     messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
+    print(f"Sending messages to Ollama: {messages}")
     response = requests.post(
         OLLAMA_API_URL,
         json={
