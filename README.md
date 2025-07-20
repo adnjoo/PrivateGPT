@@ -1,22 +1,24 @@
 # TGBot
 
-A Telegram bot that forwards messages to a local LM Studio server and replies with context-aware responses. Now with persistent vector memory and semantic search using ChromaDB and Sentence Transformers.
+A Telegram bot that forwards messages to a local Ollama server (using a model of your choice) and replies with context-aware responses.
 
 ## Quick Start
 
 ### Prerequisites
-- **Windows users**: Visual Studio required for Chroma.
+- **Ollama** installed and available in your system PATH ([see instructions](https://ollama.com/download))
+- **Windows users**: Visual Studio required for Chroma. On Windows, Ollama requires WSL2.
 
 ### Installation
 ```bash
 python -m venv venv
-source venv/bin/activate  # or source venv/Scripts/activate on Windows
+source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
-# Add BOT_TOKEN=... to a .env file
+# Add BOT_TOKEN=... and OLLAMA_MODEL=... to a .env file
 python main.py [--show-context]
 ```
 
-- Requires LM Studio running at http://localhost:1234/v1/chat/completions
+- Ollama will be started automatically by the bot if not already running.
+- The bot uses the model specified by the `OLLAMA_MODEL` variable in your `.env` file.
 - The bot keeps a short-term memory (last 30 messages per user) for context.
 - All messages are stored in ChromaDB with embeddings for persistent, semantic search.
 - Use `--show-context` to print the context window sent to the LLM for each user message.
@@ -27,8 +29,8 @@ python main.py [--show-context]
 flowchart LR
     User["User"] --> Bot["Telegram Bot"]
     Bot -- "retrieves context from" --> ChromaDB["ChromaDB"]
-    Bot -- "sends message + context" --> LMStudio["LM Studio API"]
-    LMStudio --> Bot
+    Bot -- "sends message + context" --> Ollama["Ollama (configurable model)"]
+    Ollama --> Bot
     Bot --> User
 ```
 
@@ -38,6 +40,8 @@ flowchart LR
 - Retrieval-augmented generation (RAG) ready: Use retrieved messages to enhance LLM prompts.
 
 ## Troubleshooting
-- If you see errors, ensure LM Studio is running and your .env has the correct BOT_TOKEN.
+- If you see errors, ensure Ollama is installed and your .env has the correct BOT_TOKEN and OLLAMA_MODEL.
+- The first request to a new model may take longer as Ollama downloads it.
+- On Windows, ensure WSL2 is set up and Ollama is installed inside your WSL2 environment.
 
 ## [License](./LICENSE)
