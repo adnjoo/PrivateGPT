@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-OLLAMA_MODEL = "ikiru/Dolphin-Mistral-24B-Venice-Edition:latest"
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
 OLLAMA_API_URL = "http://localhost:11434/api/chat"
 OLLAMA_START_TIMEOUT = 30  # seconds
 
