@@ -5,6 +5,8 @@ import os
 import logging
 import requests
 import argparse
+import subprocess
+import time
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -16,7 +18,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-LM_STUDIO_TIMEOUT = 180  # Timeout in seconds for LM Studio API requests
+OLLAMA_MODEL = "ikiru/Dolphin-Mistral-24B-Venice-Edition:latest"
+OLLAMA_API_URL = "http://localhost:11434/api/chat"
+OLLAMA_START_TIMEOUT = 30  # seconds
 
 # In-memory user conversation histories (user_id -> list of messages)
 user_histories = {}
@@ -36,6 +40,32 @@ if USE_CHROMA:
     logger.info("Chroma DB enabled and initialized with collection 'chat_history'.")
 else:
     logger.info("Chroma DB disabled - running in memory-only mode.")
+
+def is_ollama_running():
+    try:
+        r = requests.get("http://localhost:11434")
+        return r.status_code == 200
+    except Exception:
+        return False
+
+def start_ollama():
+    logger.info("Starting Ollama server...")
+    subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for _ in range(OLLAMA_START_TIMEOUT):
+        if is_ollama_running():
+            logger.info("Ollama server is running.")
+            return True
+        time.sleep(1)
+    logger.error("Failed to start Ollama server within timeout.")
+    return False
+
+# Start Ollama if not running
+if not is_ollama_running():
+    started = start_ollama()
+    if not started:
+        raise RuntimeError("Could not start Ollama server.")
+else:
+    logger.info("Ollama server already running.")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"/start command received from user {update.effective_user.id}")
@@ -69,19 +99,19 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         response = requests.post(
-            "http://localhost:1234/v1/chat/completions",
+            OLLAMA_API_URL,
             json={
-                "model": "cognitivecomputations_dolphin-mistral-24b-venice-edition",
+                "model": OLLAMA_MODEL,
                 "messages": history,
-                "temperature": 0.7,
-                "max_tokens": 1000
+                "stream": False,
+                "options": {"temperature": 0.7, "num_predict": 1000}
             },
-            timeout=LM_STUDIO_TIMEOUT
+            timeout=180
         )
         response.raise_for_status()
         data = response.json()
-        lm_reply = data["choices"][0]["message"]["content"]
-        logger.info(f"LM Studio reply: {lm_reply}")
+        lm_reply = data["message"]["content"]
+        logger.info(f"Ollama reply: {lm_reply}")
         await update.message.reply_text(lm_reply)
         # Add assistant reply to history
         history.append({"role": "assistant", "content": lm_reply})
@@ -93,11 +123,11 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chroma_store.save_message(lm_reply, user_id=user_id, role="assistant", message_id=update.message.message_id)
             logger.info(f"Saved assistant reply to Chroma: user_id={user_id}, message_id={update.message.message_id}")
     except requests.exceptions.RequestException as e:
-        logger.error(f"Request error communicating with LM Studio: {e}")
-        await update.message.reply_text("Sorry, I couldn't get a response from the LM Studio bot.")
+        logger.error(f"Request error communicating with Ollama: {e}")
+        await update.message.reply_text("Sorry, I couldn't get a response from the Ollama bot.")
     except Exception as e:
-        logger.error(f"Error communicating with LM Studio: {e}")
-        await update.message.reply_text("Sorry, I couldn't get a response from the LM Studio bot.")
+        logger.error(f"Error communicating with Ollama: {e}")
+        await update.message.reply_text("Sorry, I couldn't get a response from the Ollama bot.")
 
 logger.info("Starting the bot...")
 app = ApplicationBuilder().token(BOT_TOKEN).build()
