@@ -97,12 +97,18 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         similar = chroma_store.get_similar_messages(user_message, top_k=3)
         logger.debug(f"[Semantic Search] Top 3 similar messages for user {user_id}: {similar}")
 
+    SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "You are a helpful assistant.")
+    # Insert system prompt at the start
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
+
+    print(f"Messages: {messages}")
+
     try:
         response = requests.post(
             OLLAMA_API_URL,
             json={
                 "model": OLLAMA_MODEL,
-                "messages": history,
+                "messages": messages,
                 "stream": False,
                 "options": {"temperature": 0.7, "num_predict": 1000}
             },
