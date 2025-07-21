@@ -165,6 +165,22 @@ async def image_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Failed to send image: {e}")
         await update.message.reply_text("Failed to send image.")
 
+    # Shut down ComfyUI
+    try:
+        await update.message.reply_text("Shutting down ComfyUI...")
+        run_comfy.shutdown_comfy()  # This function should be implemented in run_comfy.py
+    except Exception as e:
+        logger.warning(f"Failed to shut down ComfyUI: {e}")
+        await update.message.reply_text("Warning: Could not shut down ComfyUI. Proceeding anyway.")
+
+    # Start Ollama server again
+    try:
+        await update.message.reply_text("Starting Ollama server again...")
+        ollama_client.start_ollama()  # This function should be implemented in ollama_client.py
+    except Exception as e:
+        logger.warning(f"Failed to start Ollama: {e}")
+        await update.message.reply_text("Warning: Could not start Ollama server.")
+
 logger.info("Starting the bot...")
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
