@@ -18,7 +18,7 @@ A Telegram bot that connects your chats to local LLMs (like LLaMA), generates im
 
 1. **Clone & Install**
     ```bash
-    git clone https://github.com/yourname/TeleLlama.git
+    git clone https://github.com/adnjoo/TeleLlama.git
     cd TeleLlama
     python -m venv venv
     source venv/bin/activate  # or venv\Scripts\activate on Windows
