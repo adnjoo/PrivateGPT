@@ -31,18 +31,16 @@ def send_prompt():
     print("Server response:")
     print(response.json())
 
-if __name__ == "__main__":
-    # Step 1: Start Comfy
-    proc = launch_comfy()
+def get_latest_image(output_dir):
+    """
+    Returns the path to the most recently created image file in the output directory.
+    """
+    import glob
+    import os
+    image_files = glob.glob(os.path.join(output_dir, '*.png')) + glob.glob(os.path.join(output_dir, '*.jpg'))
+    if not image_files:
+        return None
+    latest_file = max(image_files, key=os.path.getctime)
+    return latest_file
 
-    # Step 2: Wait for server to boot up
-    print("Waiting 100 seconds for ComfyUI to start...")
-    time.sleep(100)
-
-    try:
-        # Step 3: Send prompt
-        send_prompt()
-    finally:
-        # Optional: Stop ComfyUI process
-        input("Press Enter to terminate ComfyUI...")
-        proc.terminate()
+# Remove the __main__ block to make this module importable
