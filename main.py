@@ -8,6 +8,8 @@ import argparse
 import subprocess
 import time
 import ollama_client
+import run_comfy
+import asyncio
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -37,6 +39,11 @@ if USE_CHROMA:
     logger.info("Chroma DB enabled and initialized with collection 'chat_history'.")
 else:
     logger.info("Chroma DB disabled - running in memory-only mode.")
+
+# Path to ComfyUI output directory
+COMFY_PATH = os.getenv("COMFY_PATH")
+COMFY_OUTPUT_DIR = os.path.join(COMFY_PATH, "output")
+PROMPT_FILE = os.getenv("PROMPT_FILE")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"/start command received from user {update.effective_user.id}")
@@ -88,9 +95,80 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error communicating with Ollama: {e}")
         await update.message.reply_text("Sorry, I couldn't get a response from the Ollama bot.")
 
+async def image_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"/image command received from user {update.effective_user.id} with args: {context.args}")
+    if not context.args:
+        await update.message.reply_text("Please provide a prompt, e.g. /image flower")
+        return
+    prompt = " ".join(context.args)
+
+    # Load template and set prompt
+    try:
+        import json
+        with open("assets/flux_template.json", "r", encoding="utf-8") as f:
+            template = json.load(f)
+        template["prompt"]["6"]["inputs"]["text"] = prompt
+        with open(PROMPT_FILE, "w", encoding="utf-8") as f:
+            json.dump(template, f)
+    except Exception as e:
+        logger.error(f"Failed to write prompt file: {e}")
+        await update.message.reply_text("Failed to write prompt file.")
+        return
+
+    # Stop Ollama before running ComfyUI
+    try:
+        await update.message.reply_text("Stopping Ollama server before running ComfyUI...")
+        ollama_client.stop_ollama()
+    except Exception as e:
+        logger.warning(f"Failed to stop Ollama: {e}")
+        await update.message.reply_text("Warning: Could not stop Ollama server. Proceeding anyway.")
+
+    # Get set of images before generation
+    import glob
+    existing_images = set(glob.glob(os.path.join(COMFY_OUTPUT_DIR, '*.png')) + glob.glob(os.path.join(COMFY_OUTPUT_DIR, '*.jpg')))
+
+    # Launch ComfyUI (if not running) and send prompt
+    try:
+        proc = run_comfy.launch_comfy()
+        await update.message.reply_text("ComfyUI launched. Waiting for server to start...")
+        await asyncio.sleep(100)  # Wait for ComfyUI to boot up (adjust as needed)
+        run_comfy.send_prompt()
+        await update.message.reply_text("Prompt sent to ComfyUI. Waiting for image...")
+
+        # Poll for new image
+        import time
+        timeout = 120  # seconds
+        poll_interval = 2  # seconds
+        start_time = time.time()
+        new_image_path = None
+        while time.time() - start_time < timeout:
+            current_images = set(glob.glob(os.path.join(COMFY_OUTPUT_DIR, '*.png')) + glob.glob(os.path.join(COMFY_OUTPUT_DIR, '*.jpg')))
+            new_images = current_images - existing_images
+            if new_images:
+                # Get the newest image among the new ones
+                new_image_path = max(new_images, key=os.path.getctime)
+                break
+            await asyncio.sleep(poll_interval)
+        if not new_image_path:
+            await update.message.reply_text("No image generated after waiting.")
+            return
+    except Exception as e:
+        logger.error(f"Error running ComfyUI: {e}")
+        await update.message.reply_text("Error running ComfyUI.")
+        return
+
+    # Send the image
+    try:
+        with open(new_image_path, "rb") as img_file:
+            await update.message.reply_photo(photo=img_file)
+    except Exception as e:
+        logger.error(f"Failed to send image: {e}")
+        await update.message.reply_text("Failed to send image.")
+
 logger.info("Starting the bot...")
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+app.add_handler(CommandHandler("image", image_command))
 
 app.run_polling()
