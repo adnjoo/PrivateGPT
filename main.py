@@ -12,6 +12,7 @@ import run_comfy
 import asyncio
 import tempfile
 from tts import tts_command
+from shared import user_histories, logger
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
