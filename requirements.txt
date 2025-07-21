@@ -4,3 +4,5 @@ requests
 
 chromadb
 sentence-transformers
+kokoro
+soundfile

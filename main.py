@@ -10,6 +10,7 @@ import time
 import ollama_client
 import run_comfy
 import asyncio
+import tempfile
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -181,10 +182,54 @@ async def image_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.warning(f"Failed to start Ollama: {e}")
         await update.message.reply_text("Warning: Could not start Ollama server.")
 
+async def tts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Transcribe the last message (user or bot) to audio using kokoro and send as a voice message.
+    """
+    try:
+        from kokoro import KPipeline
+        import soundfile as sf
+    except ImportError:
+        await update.message.reply_text("Kokoro or soundfile not installed. Please install dependencies.")
+        return
+
+    user_id = update.effective_user.id
+    history = user_histories.get(user_id, [])
+    if not history:
+        await update.message.reply_text("No message history found.")
+        return
+    # Get the last message (prefer assistant, else user)
+    for msg in reversed(history):
+        if msg['role'] in ("assistant", "user") and msg['content']:
+            last_text = msg['content']
+            break
+    else:
+        await update.message.reply_text("No suitable message found for TTS.")
+        return
+
+    # Generate audio with kokoro
+    try:
+        pipeline = KPipeline(lang_code='a')  # American English
+        voice = 'af_heart'  # Default voice
+        generator = pipeline(last_text, voice=voice)
+        # Get the first audio chunk
+        _, _, audio = next(generator)
+        # Save to temp file
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
+            sf.write(tmp.name, audio, 24000)
+            tmp_path = tmp.name
+        # Send as voice message
+        with open(tmp_path, 'rb') as audio_file:
+            await update.message.reply_voice(voice=audio_file)
+    except Exception as e:
+        logger.error(f"TTS error: {e}")
+        await update.message.reply_text("Failed to generate audio transcription.")
+
 logger.info("Starting the bot...")
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 app.add_handler(CommandHandler("image", image_command))
+app.add_handler(CommandHandler("tts", tts_command))
 
 app.run_polling()
