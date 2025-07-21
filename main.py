@@ -24,8 +24,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# In-memory user conversation histories (user_id -> list of messages)
-user_histories = {}
 CONTEXT_WINDOW = 30  # Number of messages to keep in context
 
 parser = argparse.ArgumentParser(description="Telegram Bot with optional context window display.")
