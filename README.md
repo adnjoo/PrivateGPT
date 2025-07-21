@@ -59,9 +59,7 @@ flowchart TD
     Bot -- "context" --> ChromaDB
     Bot -- "chat" --> Ollama
     Bot -- "/image" --> ComfyUI
-    ComfyUI -- "image" --> Bot
     Bot -- "/tts" --> Kokoro
-    Kokoro -- "audio" --> Bot
     Bot --> User
 ```
 
