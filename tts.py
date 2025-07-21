@@ -2,7 +2,7 @@ import tempfile
 from telegram import Update
 from telegram.ext import ContextTypes
 import logging
-from main import user_histories, logger
+from shared import user_histories, logger
 
 async def tts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
