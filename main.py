@@ -238,11 +238,23 @@ async def tts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"TTS error during sending audio: {e}")
         await update.message.reply_text("Failed to send audio transcription.")
 
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = (
+        "Available commands:\n"
+        "/start - Start the bot\n"
+        "/help - Show this help message\n"
+        "/image <prompt> - Generate an image from a prompt using ComfyUI\n"
+        "/tts - Convert the last message to speech and send as a voice message\n"
+        "(You can also just send a message to chat with the bot.)"
+    )
+    await update.message.reply_text(help_text)
+
 logger.info("Starting the bot...")
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 app.add_handler(CommandHandler("image", image_command))
 app.add_handler(CommandHandler("tts", tts_command))
+app.add_handler(CommandHandler("help", help_command))
 
 app.run_polling()
