@@ -12,6 +12,7 @@ OLLAMA_START_TIMEOUT = 30  # seconds
 SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "You are a helpful assistant.")
 
 logger = logging.getLogger(__name__)
+ollama_process = None
 
 def is_ollama_running():
     try:
@@ -21,9 +22,19 @@ def is_ollama_running():
         return False
 
 def start_ollama():
+    """
+    Starts the Ollama server as a background process.
+    """
+    import subprocess
+    global ollama_process
+    if ollama_process is not None and ollama_process.poll() is None:
+        # Already running
+        return
+    ollama_process = subprocess.Popen([
+        "ollama", "serve"
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print(f"Starting Ollama server with model {OLLAMA_MODEL}...")
     logger.info("Starting Ollama server...")
-    subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(OLLAMA_START_TIMEOUT):
         if is_ollama_running():
             logger.info("Ollama server is running.")
@@ -57,4 +68,20 @@ def send_to_ollama(history, temperature=0.7, num_predict=1000, timeout=180):
     )
     response.raise_for_status()
     data = response.json()
-    return data["message"]["content"] 
+    return data["message"]["content"]
+
+def stop_ollama(model=None):
+    """
+    Gracefully stops the Ollama server or a specific model using the built-in command.
+    If model is None, stops all models.
+    """
+    import subprocess
+    import os
+    model = model or os.getenv("OLLAMA_MODEL")
+    cmd = ["ollama", "stop"]
+    if model:
+        cmd.append(model)
+    try:
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        logger.warning(f"Failed to stop Ollama gracefully: {e}") 
