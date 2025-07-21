@@ -11,7 +11,7 @@ A Telegram bot that forwards messages to a local Ollama server (using a model of
 ### Installation
 ```bash
 python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
+source venv/bin/activate  # or source venv/Scripts/activate on Windows
 pip install -r requirements.txt
 # Add BOT_TOKEN=... and OLLAMA_MODEL=... to a .env file
 python main.py [--show-context]
