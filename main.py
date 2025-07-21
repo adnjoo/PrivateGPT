@@ -189,8 +189,9 @@ async def tts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         from kokoro import KPipeline
         import soundfile as sf
+        import numpy as np
     except ImportError:
-        await update.message.reply_text("Kokoro or soundfile not installed. Please install dependencies.")
+        await update.message.reply_text("Kokoro, soundfile, or numpy not installed. Please install dependencies.")
         return
 
     user_id = update.effective_user.id
@@ -212,18 +213,30 @@ async def tts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pipeline = KPipeline(lang_code='a')  # American English
         voice = 'af_heart'  # Default voice
         generator = pipeline(last_text, voice=voice)
-        # Get the first audio chunk
-        _, _, audio = next(generator)
+        audio_chunks = []
+        for _, _, audio in generator:
+            audio_chunks.append(audio)
+        if not audio_chunks:
+            await update.message.reply_text("No audio generated.")
+            return
+        # Concatenate all audio chunks
+        full_audio = np.concatenate(audio_chunks)
         # Save to temp file
         with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
-            sf.write(tmp.name, audio, 24000)
+            sf.write(tmp.name, full_audio, 24000)
             tmp_path = tmp.name
-        # Send as voice message
+    except Exception as e:
+        logger.error(f"TTS error during audio generation: {e}")
+        await update.message.reply_text("Failed to generate audio transcription.")
+        return
+
+    # Send as voice message
+    try:
         with open(tmp_path, 'rb') as audio_file:
             await update.message.reply_voice(voice=audio_file)
     except Exception as e:
-        logger.error(f"TTS error: {e}")
-        await update.message.reply_text("Failed to generate audio transcription.")
+        logger.error(f"TTS error during sending audio: {e}")
+        await update.message.reply_text("Failed to send audio transcription.")
 
 logger.info("Starting the bot...")
 app = ApplicationBuilder().token(BOT_TOKEN).build()
