@@ -3,10 +3,13 @@ import time
 import requests
 import json
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # === CONFIG ===
-COMFY_PATH = r"C:\Users\adnjo\Documents\comfy\ComfyUI"  # path to ComfyUI folder
-PROMPT_FILE = "a_fixed.json"  # should be in same directory as this script
+COMFY_PATH = os.getenv("COMFY_PATH")  # path to ComfyUI folder
+PROMPT_FILE = os.getenv("PROMPT_FILE") # should be in same directory as this script
 COMFY_PORT = 8188
 
 def launch_comfy():
