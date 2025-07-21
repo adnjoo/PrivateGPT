@@ -10,6 +10,7 @@ import time
 import ollama_client
 import run_comfy
 import asyncio
+import tempfile
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -181,10 +182,79 @@ async def image_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.warning(f"Failed to start Ollama: {e}")
         await update.message.reply_text("Warning: Could not start Ollama server.")
 
+async def tts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Transcribe the last message (user or bot) to audio using kokoro and send as a voice message.
+    """
+    try:
+        from kokoro import KPipeline
+        import soundfile as sf
+        import numpy as np
+    except ImportError:
+        await update.message.reply_text("Kokoro, soundfile, or numpy not installed. Please install dependencies.")
+        return
+
+    user_id = update.effective_user.id
+    history = user_histories.get(user_id, [])
+    if not history:
+        await update.message.reply_text("No message history found.")
+        return
+    # Get the last message (prefer assistant, else user)
+    for msg in reversed(history):
+        if msg['role'] in ("assistant", "user") and msg['content']:
+            last_text = msg['content']
+            break
+    else:
+        await update.message.reply_text("No suitable message found for TTS.")
+        return
+
+    # Generate audio with kokoro
+    try:
+        pipeline = KPipeline(lang_code='a')  # American English
+        voice = 'af_heart'  # Default voice
+        generator = pipeline(last_text, voice=voice)
+        audio_chunks = []
+        for _, _, audio in generator:
+            audio_chunks.append(audio)
+        if not audio_chunks:
+            await update.message.reply_text("No audio generated.")
+            return
+        # Concatenate all audio chunks
+        full_audio = np.concatenate(audio_chunks)
+        # Save to temp file
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
+            sf.write(tmp.name, full_audio, 24000)
+            tmp_path = tmp.name
+    except Exception as e:
+        logger.error(f"TTS error during audio generation: {e}")
+        await update.message.reply_text("Failed to generate audio transcription.")
+        return
+
+    # Send as voice message
+    try:
+        with open(tmp_path, 'rb') as audio_file:
+            await update.message.reply_voice(voice=audio_file)
+    except Exception as e:
+        logger.error(f"TTS error during sending audio: {e}")
+        await update.message.reply_text("Failed to send audio transcription.")
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = (
+        "Available commands:\n"
+        "/start - Start the bot\n"
+        "/help - Show this help message\n"
+        "/image <prompt> - Generate an image from a prompt using ComfyUI\n"
+        "/tts - Convert the last message to speech and send as a voice message\n"
+        "(You can also just send a message to chat with the bot.)"
+    )
+    await update.message.reply_text(help_text)
+
 logger.info("Starting the bot...")
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 app.add_handler(CommandHandler("image", image_command))
+app.add_handler(CommandHandler("tts", tts_command))
+app.add_handler(CommandHandler("help", help_command))
 
 app.run_polling()
