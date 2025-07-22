@@ -1,4 +1,4 @@
-# TeleLlama
+# PrivateGPT
 
 A Telegram bot that connects your chats to local LLMs (like LLaMA), generates images, and speaks with TTS—all running on your own machine.
 
@@ -18,8 +18,8 @@ A Telegram bot that connects your chats to local LLMs (like LLaMA), generates im
 
 1. **Clone & Install**
     ```bash
-    git clone https://github.com/adnjoo/TeleLlama.git
-    cd TeleLlama
+    git clone https://github.com/adnjoo/PrivateGPT.git
+    cd PrivateGPT
     python -m venv venv
     source venv/bin/activate  # or venv\Scripts\activate on Windows
     pip install -r requirements.txt
@@ -55,7 +55,7 @@ A Telegram bot that connects your chats to local LLMs (like LLaMA), generates im
 
 ```mermaid
 flowchart TD
-    User["User"] --> Bot["TeleLlama"]
+    User["User"] --> Bot["PrivateGPT"]
     Bot -- "context" --> ChromaDB
     Bot -- "chat" --> Ollama
     Bot -- "/image" --> ComfyUI
