@@ -1,6 +1,6 @@
 # PrivateGPT
 
-A Telegram bot that connects your chats to local LLMs (like LLaMA), generates images, and speaks with TTS—all running on your own machine.
+PrivateGPT lets you chat with your own local LLM from anywhere—using Telegram on mobile or web. Generate images, convert text to speech, and keep all data private on your own machine.
 
 ---
 
